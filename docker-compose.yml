@@ -1,0 +1,54 @@
+---
+
+cozy_controller:
+  container_name: cozy_controller
+  build: images/cozy_controller
+  restart: always
+  links:
+    - cozy_couchdb
+    - cozy_smtp
+  environment:
+    - COUCH_HOST=cozy_couchdb
+    - POSTFIX_HOST=cozy_smtp
+    - VIRTUAL_HOST=cozy.dev
+
+# https://github.com/namshi/docker-smtp
+cozy_smtp:
+  container_name: cozy_smtp
+  image: namshi/smtp
+  restart: always
+  ports:
+    - "25:25"
+
+# https://github.com/klaemo/docker-couchdb
+cozy_couchdb:
+  container_name: cozy_couchdb
+  build: images/couchdb
+  restart: always
+  ports:
+    - "5984:5984"
+
+# https://github.com/jwilder/nginx-proxy
+cozy_nginx:
+  container_name: cozy_nginx
+  image: jwilder/nginx-proxy
+  restart: always
+  volumes:
+    - ./data/nginx/certs:/etc/nginx/certs
+    - /etc/nginx/vhost.d
+    - /usr/share/nginx/html
+    - /var/run/docker.sock:/tmp/docker.sock:ro
+  ports:
+    - "80:80"
+    - "443:443"
+
+# https://github.com/JrCs/docker-letsencrypt-nginx-proxy-companion
+cozy_letsencrypt:
+  container_name: cozy_letsencrypt
+  image: jrcs/letsencrypt-nginx-proxy-companion
+  restart: always
+  volumes:
+    - ./data/nginx/certs:/etc/nginx/certs:rw
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+  volumes_from:
+    - cozy_nginx
